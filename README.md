@@ -28,3 +28,7 @@
 ## dev
 
 尝试调用自己手写的 webpack、loader、plugin
+
+## notes
+
+日常笔记记录
