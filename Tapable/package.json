@@ -1,0 +1,9 @@
+{
+  "name": "Tapable",
+  "version": "1.0.0",
+  "main": "index.js",
+  "license": "MIT",
+  "devDependencies": {
+    "tapable": "^1.1.3"
+  }
+}

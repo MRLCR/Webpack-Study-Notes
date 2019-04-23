@@ -1,0 +1,16 @@
+{
+  "name": "lin-webpack",
+  "version": "1.0.0",
+  "main": "index.js",
+  "license": "MIT",
+  "bin": {
+    "lin-webpack": "./bin/lin-webpack.js"
+  },
+  "devDependencies": {
+    "@babel/generator": "^7.4.0",
+    "@babel/traverse": "^7.4.3",
+    "@babel/types": "^7.4.0",
+    "babylon": "^6.18.0",
+    "tapable": "^1.1.3"
+  }
+}
