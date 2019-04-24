@@ -1,3 +1,7 @@
+# 文章链接
+
+在[某乎](https://www.zhihu.com/people/lin-chu-ran-14/posts)上有关于这次学习的文章v
+
 # small-webpack
 
 这个项目是为了自己学习 webpack 基础原理而创建的。
