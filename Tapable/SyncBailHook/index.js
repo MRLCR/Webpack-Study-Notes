@@ -7,7 +7,6 @@ class SyncBailHook extends BaseHook {
       tasks = [],
     } = this;
     const len = tasks.length;
-
     for(let i = 0; i < len; i++) {
       const { task } = tasks[i];
       const res = task(...args);

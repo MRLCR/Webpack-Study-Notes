@@ -6,7 +6,6 @@ class SyncWaterfallHook extends BaseHook {
       tasks=[],
     } = this;
     const [fristFn, ...otherTasks] = tasks;
-    console.log(fristFn);
     otherTasks.reduce((res, item) => {
       return item.task(res);
     }, fristFn.task(...args));
