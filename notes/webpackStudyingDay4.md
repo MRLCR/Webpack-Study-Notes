@@ -407,6 +407,8 @@ module.exports = SyncHook;
 
 #### SyncBailHook
 
+能中途停止的同步事件流
+
 ```js
 const BaseHook = require('../base.js');
 
@@ -433,14 +435,350 @@ module.exports = SyncBailHook;
 
 #### SyncWaterfallHook
 
+瀑布同步事件流，上个事件的结果作为下个事件的传参
+
+```js
+const BaseHook = require('../base');
+
+class SyncWaterfallHook extends BaseHook {
+  call(...args) {
+    const {
+      tasks=[],
+    } = this;
+    const [fristFn, ...otherTasks] = tasks;
+    otherTasks.reduce((res, item) => {
+      return item.task(res);
+    }, fristFn.task(...args));
+  }
+}
+
+module.exports = SyncWaterfallHook;
+
+```
+
 #### SyncLoopHook
+
+循环同步事件流，某个事件重复执行多次再执行下一个事件
+
+```js
+const BaseHook = require('../base');
+
+class SyncLoopHook extends BaseHook {
+  call(...args) {
+    const {
+      tasks = [],
+    } = this;
+    const maxLoop = 3;
+    
+    tasks.forEach(({ task }) => {
+      let res;
+      for(let i = 0; i < maxLoop; i ++) {
+        res = task(...args);
+        if (typeof res === 'undefined') {
+          break;
+        }
+      }
+      return res;
+    });
+  }
+}
+
+module.exports = SyncLoopHook;
+
+```
+
+***
+
+BaseAsyncHook
+
+先写了一个异步基类的钩子 方便后面继承
+
+```js
+const BaseHook = require('./base');
+
+class BaseAsyncHook extends BaseHook {
+  /**
+   * 注册异步任务
+   * @param {*} name 任务名称
+   * @param {*} task 任务内容
+   */
+  tapAsync(name, task) {
+    this.tasks.push({ name, task });
+  }
+  /**
+   * 注册异步任务 Promise 版
+   * @param {*} name 任务名称
+   * @param {*} task 任务内容
+   */
+  tapPromise(name, task) {
+    this.tasks.push({ name, task });
+  }
+}
+
+module.exports = BaseAsyncHook;
+
+```
 
 #### AsyncParallelHook
 
+异步并行事件流
+
+```js
+const BaseAsyncHook = require('../baseAsync');
+
+class AsyncParralleHook extends BaseAsyncHook {
+  /**
+   * 执行所有 task
+   * @param  {...any} args task 获取的参数 最后一个参数为回调参数
+   */
+  callAsync(...args) {
+    const {
+      tasks,
+    } = this;
+    const finalCallback = args.pop(); // 执行的回调函数
+    if (typeof finalCallback !== 'function') {
+      throw Error ('need a callback function');
+    }
+    const tasksLen = tasks.length;
+    let index = 0;
+    const done = () => {
+      index ++;
+      if (index === tasksLen) {
+        try {
+          finalCallback();
+        } catch (e) {
+          throw Error(e);
+        }
+      }
+    }
+    tasks.forEach(({ task }) => {
+      try {
+        task(...args, done);
+      } catch (e) {
+        throw Error(e);
+      }
+    });
+  }
+  promise(...args) {
+    const {
+      tasks,
+    } = this;
+    return Promise.all(tasks.map(({ task }) => {
+      try {
+        const res = task(...args);
+        if (!(res instanceof Promise)) {
+          throw Error('task result need a Promise');
+        }
+        return res;
+      } catch (e) {
+        throw Error(e);
+      }
+    }));
+  }
+}
+
+module.exports = AsyncParralleHook;
+
+```
+
 #### AsyncParallelBailHook
+
+异步并行可终止的事件流
+
+```js
+const BaseAsyncHook = require('../baseAsync');
+
+class AsyncParralleBailHokk extends BaseAsyncHook {
+  callAsync(...args) {
+    const {
+      tasks,
+    } = this;
+    const finalCallback = args.pop();
+    if (typeof finalCallback !== 'function') {
+      throw Error('need a callback function');
+    }
+    const tasksLen = tasks.length;
+    let index = 0;
+    const done = () => {
+      index++;
+      if (index === tasksLen) {
+        try {
+          finalCallback();
+        } catch (e) {
+          throw Error(e);
+        }
+      }
+    }
+    let taskRes = null;
+    for(let i = 0; i < tasks.length; i++) {
+      try {
+        taskRes = taskRes[i](...args, done);
+        // 如果有事件返回 undefined 停止执行
+        if (typeof taskRes === 'undefined') {
+          return;
+        }
+      } catch (e) {
+        throw Error(e);
+      }
+    }
+  }
+}
+
+module.exports = AsyncParralleBailHokk;
+
+```
 
 #### AsyncSeriesHook
 
+异步串行事件流
+
+```js
+const BaseAsyncHook = require('../baseAsync');
+
+class AsyncSeriesHook extends BaseAsyncHook {
+  callAsync(...args) {
+    const {
+      tasks,
+    } = this;
+    const finalCallback = args.pop();
+    const tasksLen = tasks.length;
+    let index = 0;
+    const next = () => {
+      if (index === tasksLen) {
+        try {
+          finalCallback();
+        } catch (e) {
+          throw Error(e);
+        }
+      } else {
+        try {
+          const  { task } = tasks[index];
+          index++;
+          task(...args, next);
+        } catch (e) {
+          throw Error(e);
+        }
+      }
+    }
+    next();
+  }
+  promise(...args) {
+    const {
+      tasks,
+    } = this;
+    const [{task: fristTask = function(){}}, ...otherTasks] = tasks;
+    return otherTasks.reduce((p, next) => {
+      const {task: nextTask} = next;
+      return p.then(() => nextTask(...args));
+    }, fristTask(...args));
+  }
+}
+
+module.exports = AsyncSeriesHook;
+
+```
+
 #### AsyncSeriesBailHook
 
+异步串行可终止的事件流
+
+```js
+const BaseAsyncHook = require('../baseAsync');
+
+class AsyncSeriesBailHook extends BaseAsyncHook {
+  callAsync(...args) {
+    const {
+      tasks,
+    } = this;
+    const finalCallback = args.pop();
+    const tasksLen = tasks.length;
+    let index = 0;
+    const next = (res) => {
+      if (typeof res !== 'undefined') {
+        if (index === tasksLen) {
+          try {
+            finalCallback();
+          } catch (e) {
+            throw Error(e);
+          }
+        } else {
+          try {
+            const  { task } = tasks[index];
+            index++;
+            task(...args, next);
+          } catch (e) {
+            throw Error(e);
+          }
+        }
+      }
+    }
+    next();
+  }
+  promise(...args) {
+    const {
+      tasks,
+    } = this;
+    const [{task: fristTask = function(){}}, ...otherTasks] = tasks;
+    return otherTasks.reduce((p, next) => {
+      const {task: nextTask} = next;
+      return p.then(() => nextTask(...args));
+    }, fristTask(...args));
+  }
+}
+
+module.exports = AsyncSeriesBailHook;
+
+```
+
 #### AsyncSeriesWaterfallHook
+
+异步串行瀑布事件流
+
+```js
+const BaseAsyncHook = require('../baseAsync');
+
+class AsyncSeriesWaterfall extends BaseAsyncHook {
+  callAsync(...args) {
+    const {
+      tasks
+    } = this;
+    const finalCallback = args.pop();
+    const tasksLen = tasks.length;
+    let index = 0;
+    const next = (error, ...data) => {
+      if (error !== null && error !== '' && typeof error !== 'undefined') {
+        throw Error(error);
+      }
+      if (index === tasksLen) {
+        try {
+          finalCallback();
+        } catch (e) {
+          throw Error(e);
+        }
+      } else {
+        const {task} = tasks[index];
+        index++;
+        try {
+          task(...data, next);
+        } catch (e) {
+          throw Error(e);
+        }
+      }
+    }
+    next(null, ...args);
+  }
+  promise(...args) {
+    const {
+      tasks,
+    } = this;
+    const [{task: fristTask}, ...otherTasks] = tasks;
+    return otherTasks.reduce((p, next) => {
+      const {task: nextTask} = next;
+      return p.then(nextTask);
+    }, fristTask(null, ...args));
+  }
+}
+
+module.exports = AsyncSeriesWaterfall;
+
+```

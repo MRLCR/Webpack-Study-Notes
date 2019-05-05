@@ -1,6 +1,6 @@
 const BaseAsyncHook = require('../baseAsync');
 
-class AsyncSeriesWaterfall extends BaseAsyncHook {
+class AsyncSeriesWaterfallHook extends BaseAsyncHook {
   callAsync(...args) {
     const {
       tasks
@@ -42,4 +42,4 @@ class AsyncSeriesWaterfall extends BaseAsyncHook {
   }
 }
 
-module.exports = AsyncSeriesWaterfall;
+module.exports = AsyncSeriesWaterfallHook;

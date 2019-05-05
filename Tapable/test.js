@@ -6,7 +6,7 @@ const SyncLoopHook = require('./SyncLoopHook');
 const AsyncParralleHook = require('./AsyncParralleHook');
 const AsyncPallalleBailHook = require('./AsyncParralleBailHook');
 const AsyncSeriesHook = require('./AsyncSeriesHook');
-const AsyncSeriesWaterfall = require('./AsyncSeriesWaterfall');
+const AsyncSeriesWaterfallHook = require('./AsyncSeriesWaterfallHook');
 
 class Vacation{
   constructor() {
